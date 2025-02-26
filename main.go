@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -55,7 +56,65 @@ func processFile(filePath string) error {
 }
 
 func processPath(path string) error {
-	fileInfo, err := os.Stat(path)
+
+	// First expand any tilde in the path
+	expandedPath, err := expandPath(path)
+	if err != nil {
+		fmt.Fprintf(
+			os.Stderr,
+			redColor+"Error expanding path %s: %s\n"+resetColor,
+			path,
+			err,
+		)
+		return err
+	}
+
+	// Check if the path contains any glob patterns
+	if containsGlob(expandedPath) {
+		// Expand the glob pattern
+		matches, err := filepath.Glob(expandedPath)
+		if err != nil {
+			fmt.Fprintf(
+				os.Stderr,
+				redColor+"Error expanding glob pattern %s: %s\n"+resetColor,
+				expandedPath,
+				err,
+			)
+			return err
+		}
+
+		if len(matches) == 0 {
+			fmt.Fprintf(
+				os.Stderr,
+				redColor+"No files match pattern: %s\n"+resetColor,
+				expandedPath,
+			)
+			return fmt.Errorf("no files match pattern: %s", expandedPath)
+		}
+
+		// Process each matched file
+		for _, match := range matches {
+			if err := processFile(match); err != nil {
+				// Continue to next file even if there's an error
+				continue
+			}
+		}
+		return nil
+	}
+
+	// If no glob patterns, process as before
+	fileInfo, err := os.Stat(expandedPath)
+	if err != nil {
+		fmt.Fprintf(
+			os.Stderr,
+			redColor+"Error accessing path %s: %s\n"+resetColor,
+			expandedPath,
+			err,
+		)
+		return err
+	}
+
+	fileInfo, err = os.Stat(path)
 	if err != nil {
 		fmt.Fprintf(
 			os.Stderr,
@@ -134,4 +193,8 @@ func expandPath(path string) (string, error) {
 	}
 
 	return filepath.Join(homeDir, path[1:]), nil
+}
+
+func containsGlob(path string) bool {
+	return strings.ContainsAny(path, "*?[")
 }
