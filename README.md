@@ -15,7 +15,7 @@ dump [options] <file_path1> <file_path2> ...
 **Options:**
 
 *   `-version`: Displays the `dump` utility version.
-*   `-ignore="<pattern1>,<pattern2>,..."`:  A comma-separated list of patterns to ignore.  *No spaces are allowed within the pattern string itself,* but leading/trailing spaces around each individual pattern will be trimmed.  Patterns can be:
+*   `-ignore="<pattern1>,<pattern2>,..."` of `-i="<pattern1>,<pattern2>,..."`:  A comma-separated list of patterns to ignore.  *No spaces are allowed within the pattern string itself,* but leading/trailing spaces around each individual pattern will be trimmed.  Patterns can be:
     *   **File patterns:** `*.log`, `config.ini`, `temp*.txt`
     *   **Directory patterns:** `temp/`, `.git/`, `__pycache__/` (**Note:** Trailing `/` is crucial for directory matches).
     *   **Relative paths:** `src/ignored_file.txt`, `data/private/`

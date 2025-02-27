@@ -1,4 +1,3 @@
-// dump - A Simple File and Directory Content Dumper
 package main
 
 import (
@@ -13,46 +12,58 @@ import (
 const version = "1.0.0"
 
 func main() {
-	// Define command-line flags
 	versionFlag := flag.Bool("version", false, "Display the version of the dump utility")
 	ignoreFlag := flag.String(
 		"ignore",
 		"",
 		"A comma-separated list of patterns to ignore (e.g., \"*.log,temp/,config.ini\")",
 	)
+	ignoreShortFlag := flag.String(
+		"i",
+		"",
+		"A comma-separated list of patterns to ignore (e.g., \"*.log,temp/,config.ini\")",
+	)
+	includeHiddenFlag := flag.Bool(
+		"hidden",
+		false,
+		"Include hidden files and directories (those starting with a dot)",
+	)
+
 	helpFlag := flag.Bool("help", false, "Show help information")
 
-	// Parse command-line flags
 	flag.Parse()
 
-	// Show help if requested
 	if *helpFlag {
 		printHelp()
 		return
 	}
 
-	// Display version and exit if version flag is set
 	if *versionFlag {
 		fmt.Println("dump version:", version)
 		return
 	}
 
-	// Collect paths to process
 	paths := flag.Args()
 
-	// Check if no paths are provided
 	if len(paths) == 0 {
 		fmt.Println("Error: No file or directory paths specified.")
 		printHelp()
 		os.Exit(1)
 	}
 
-	// Parse ignore patterns
-	ignorePatterns := parseIgnorePatterns(*ignoreFlag)
+	var ignorePatterns []string
 
-	// Process each path
+	if *ignoreFlag != "" && *ignoreShortFlag != "" {
+		fmt.Println("Error: Please use only one ignore flag, either -ignore or -i.")
+		printHelp()
+		os.Exit(1)
+	} else if *ignoreFlag != "" {
+		ignorePatterns = parseIgnorePatterns(*ignoreFlag)
+	} else if *ignoreShortFlag != "" {
+		ignorePatterns = parseIgnorePatterns(*ignoreShortFlag)
+	}
+
 	for _, path := range paths {
-		// Check if the path is a glob pattern
 		if containsGlobPattern(path) {
 			matches, err := filepath.Glob(path)
 			if err != nil {
@@ -66,15 +77,14 @@ func main() {
 			}
 
 			for _, match := range matches {
-				processPath(match, ignorePatterns)
+				processPath(match, ignorePatterns, *includeHiddenFlag)
 			}
 		} else {
-			processPath(path, ignorePatterns)
+			processPath(path, ignorePatterns, *includeHiddenFlag)
 		}
 	}
 }
 
-// Parse comma-separated ignore patterns
 func parseIgnorePatterns(ignoreStr string) []string {
 	if ignoreStr == "" {
 		return nil
@@ -87,76 +97,69 @@ func parseIgnorePatterns(ignoreStr string) []string {
 	return patterns
 }
 
-// Check if a path should be ignored based on patterns
-func shouldIgnore(path string, isDir bool, ignorePatterns []string) bool {
+func shouldIgnore(path string, isDir bool, ignorePatterns []string, includeHidden bool) bool {
+	if !includeHidden {
+		baseName := filepath.Base(path)
+		if len(baseName) > 0 && baseName[0] == '.' {
+			return true
+		}
+	}
+
 	if len(ignorePatterns) == 0 {
 		return false
 	}
 
-	// Convert path to use forward slashes for consistency
 	path = filepath.ToSlash(path)
 
-	// If it's a directory, add a trailing slash for pattern matching
 	testPath := path
 	if isDir && !strings.HasSuffix(testPath, "/") {
 		testPath += "/"
 	}
 
 	for _, pattern := range ignorePatterns {
-		// Normalize patterns to use forward slashes
 		pattern = filepath.ToSlash(pattern)
 
-		// Check if pattern represents the current directory
 		if pattern == "." || pattern == "./" {
 			if path == "." || path == "./" {
 				return true
 			}
 		}
 
-		// Directory pattern handling
 		isDirectoryPattern := strings.HasSuffix(pattern, "/")
 		if isDirectoryPattern && isDir {
-			// Remove trailing slash for matching
 			dirPattern := strings.TrimSuffix(pattern, "/")
 
-			// Match exact directory or parent directory
 			if matched, _ := filepath.Match(dirPattern, strings.TrimSuffix(testPath, "/")); matched {
 				return true
 			}
 
-			// Check if it's a subdirectory of an ignored directory
 			if strings.HasPrefix(path, pattern) {
 				return true
 			}
 		}
 
-		// File pattern handling
 		matched, err := filepath.Match(pattern, filepath.Base(path))
 		if err == nil && matched && !isDir {
 			return true
 		}
 
-		// Path pattern handling
 		matched, err = filepath.Match(pattern, path)
 		if err == nil && matched {
 			return true
 		}
 
-		// Handle glob patterns that might match the full path
 		if strings.Contains(pattern, "*") || strings.Contains(pattern, "?") ||
 			strings.Contains(pattern, "[") {
 			if ok, _ := filepath.Match(pattern, path); ok {
 				return true
 			}
 
-			// Special handling for patterns like "logs/*/*.log"
 			if strings.Contains(pattern, "*/") {
 				parts := strings.Split(pattern, "*/")
 				if len(parts) >= 2 && strings.HasPrefix(path, parts[0]) {
 					restPattern := strings.Join(parts[1:], "*/")
 					restPath := strings.TrimPrefix(path, parts[0])
 
-					// Check if any subdirectory matches the pattern
 					dirs := strings.Split(restPath, "/")
 					for i := range dirs {
 						subPath := strings.Join(dirs[i:], "/")
@@ -172,30 +175,25 @@ func shouldIgnore(path string, isDir bool, ignorePatterns []string) bool {
 	return false
 }
 
-// Process a file or directory path
-func processPath(path string, ignorePatterns []string) {
+func processPath(path string, ignorePatterns []string, includeHidden bool) {
 	info, err := os.Stat(path)
 	if err != nil {
 		fmt.Printf("Error accessing '%s': %v\n", path, err)
 		return
 	}
 
-	// Check if the item should be ignored
-	if shouldIgnore(path, info.IsDir(), ignorePatterns) {
+	if shouldIgnore(path, info.IsDir(), ignorePatterns, includeHidden) {
 		return
 	}
 
 	if info.IsDir() {
-		// Process directory recursively
-		processDirectory(path, ignorePatterns)
+		processDirectory(path, ignorePatterns, includeHidden)
 	} else {
-		// Process individual file
 		dumpFile(path)
 	}
 }
 
-// Process a directory recursively
-func processDirectory(dirPath string, ignorePatterns []string) {
+func processDirectory(dirPath string, ignorePatterns []string, includeHidden bool) {
 	err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			fmt.Printf("Error accessing '%s': %v\n", path, err)
@@ -205,14 +203,13 @@ func processDirectory(dirPath string, ignorePatterns []string) {
 		isDir := d.IsDir()
 
 		// Check if the item should be ignored
-		if shouldIgnore(path, isDir, ignorePatterns) {
+		if shouldIgnore(path, isDir, ignorePatterns, includeHidden) {
 			if isDir {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 
-		// Dump file content if it's a regular file
 		if !isDir {
 			dumpFile(path)
 		}
@@ -225,7 +222,6 @@ func processDirectory(dirPath string, ignorePatterns []string) {
 	}
 }
 
-// Dump the content of a file
 func dumpFile(filePath string) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
@@ -233,10 +229,9 @@ func dumpFile(filePath string) {
 		return
 	}
 
-	// Determine file extension for the code block format
 	ext := filepath.Ext(filePath)
 	if ext != "" {
-		ext = ext[1:] // Remove the dot
+		ext = ext[1:]
 	}
 
 	fmt.Println("---FILE-START---")
@@ -250,12 +245,10 @@ func dumpFile(filePath string) {
 	fmt.Println()
 }
 
-// Check if a path contains glob patterns
 func containsGlobPattern(path string) bool {
 	return strings.ContainsAny(path, "*?[")
 }
 
-// Print help information
 func printHelp() {
 	fmt.Println("dump - A Simple File and Directory Content Dumper")
 	fmt.Println("\nUsage:")
@@ -267,6 +260,10 @@ func printHelp() {
 	fmt.Println(
 		"  -ignore=\"<pattern1>,<pattern2>,...\"  Comma-separated list of patterns to ignore",
 	)
+	fmt.Println(
+		"  -i=\"<pattern1>,<pattern2>,...\"  Comma-separated list of patterns to ignore",
+	)
+	fmt.Println("  -hidden        Include hidden files and directories (starting with a dot)")
 	fmt.Println("  -help          Show this help information")
 	fmt.Println("\nExamples:")
 	fmt.Println("  dump file.txt                        # Dump a single file")
@@ -275,4 +272,5 @@ func printHelp() {
 	)
 	fmt.Println("  dump *.go                            # Dump all Go files in current directory")
 	fmt.Println("  dump -ignore=\"*.log,temp/\" project/   # Ignore .log files and temp directory")
+	fmt.Println("  dump -hidden project/                # Include hidden files like .gitignore")
 }
