@@ -106,16 +106,16 @@ dump ./fileA.md ./fileB.md
 **Output:**
 
 ````
---- FILE-START ---
+---FILE-START---
 ``` fileA.md
 fileA-Content
 ```
---- FILE-END ---
+---FILE-END---
 
-<FILE-START>
+--- FILE-START ---
 ``` fileB.md
 fileB-Content
 ```
-<FILE-END>
+---FILE-END---
 ````
 
