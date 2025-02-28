@@ -2,6 +2,22 @@
 
 `dump` is a command-line utility that displays the content of files and directories to standard output. perfect for quickly copy paste context into llm 
 
+## Installation
+
+1. Download the binary
+2. Use it
+
+### _For the lazy ones_
+
+``` bash
+# Macos
+curl -L "https://github.com/Jawkx/cmtbot/releases/download/<VERSION>/dump-darwin-amd64" -o dump && chmod +x dump && sudo mkdir -p /usr/local/bin 2>/dev/null && sudo mv dump /usr/local/bin/dump
+
+# Linux
+curl -L "https://github.com/Jawkx/cmtbot/releases/download/<VERSION>/dump-linux-amd64" -o dump && chmod +x dump && sudo mkdir -p /usr/local/bin 2>/dev/null && sudo mv dump /usr/local/bin/dump
+```
+_make sure `usr/local/bin/` is in path_
+
 ## Usage
 
 ```bash
