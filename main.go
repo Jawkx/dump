@@ -13,6 +13,8 @@ const version = "1.0.0"
 
 func main() {
 	versionFlag := flag.Bool("version", false, "Display the version of the dump utility")
+	versionShortFlag := flag.Bool("v", false, "Display the version of the dump utility")
+
 	ignoreFlag := flag.String(
 		"ignore",
 		"",
@@ -23,6 +25,7 @@ func main() {
 		"",
 		"A comma-separated list of patterns to ignore (e.g., \"*.log,temp/,config.ini\")",
 	)
+
 	includeHiddenFlag := flag.Bool(
 		"hidden",
 		false,
@@ -30,15 +33,16 @@ func main() {
 	)
 
 	helpFlag := flag.Bool("help", false, "Show help information")
+	helpShortFlag := flag.Bool("h", false, "Show help information")
 
 	flag.Parse()
 
-	if *helpFlag {
+	if *helpFlag || *helpShortFlag {
 		printHelp()
 		return
 	}
 
-	if *versionFlag {
+	if *versionFlag || *versionShortFlag {
 		fmt.Println("dump version:", version)
 		return
 	}
