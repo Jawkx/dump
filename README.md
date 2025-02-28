@@ -1,6 +1,6 @@
 # dump - A Simple File and Directory Content Dumper
 
-`dump` is a command-line utility that displays the contents of files and directories. It supports glob patterns and selective ignoring of files/directories
+`dump` is a command-line utility that displays the content of files and directories to standard output. It supports recursive directory traversal, glob patterns for file selection, and ignore patterns to exclude specific files and directories.
 
 ## Usage
 
@@ -8,114 +8,127 @@
 dump [options] <file_path1> <file_path2> ...
 ```
 
-**Arguments:**
+## Arguments
 
-*   `<file_path1> <file_path2> ...`: One or more paths to files or directories. Supports glob patterns (wildcards).  If a directory is provided, `dump` recursively displays the contents of all files within it (subject to any ignore patterns). You can use relative or absolute paths.
+*   `<file_path>`:  Path to a file or directory. Supports glob patterns.  You can specify multiple paths.
 
-**Options:**
+## Options
 
-*   `-version`: Displays the `dump` utility version.
-*   `-ignore="<pattern1>,<pattern2>,..."` of `-i="<pattern1>,<pattern2>,..."`:  A comma-separated list of patterns to ignore.  *No spaces are allowed within the pattern string itself,* but leading/trailing spaces around each individual pattern will be trimmed.  Patterns can be:
-    *   **File patterns:** `*.log`, `config.ini`, `temp*.txt`
-    *   **Directory patterns:** `temp/`, `.git/`, `__pycache__/` (**Note:** Trailing `/` is crucial for directory matches).
-    *   **Relative paths:** `src/ignored_file.txt`, `data/private/`
-    *    **Current directory**: `.`, `./`
-    *   Glob patterns are fully supported within ignore patterns (e.g., `-ignore="logs/*/*.log"`).
+*   `-version` or `-v`: Display the version of the `dump` utility.
+*   `-ignore="<pattern1>,<pattern2>,..."`:  Comma-separated list of patterns to ignore.  Patterns can include wildcards (`*`, `?`, `[]`).  Directory patterns should end with a forward slash (`/`). This flag and `-i` are mutually exclusive.
+*   `-i="<pattern1>,<pattern2>,..."`:  Short form of `-ignore`. Comma-separated list of patterns to ignore. This flag and `-ignore` are mutually exclusive.
+*   `-hidden`: Include hidden files and directories (those starting with a dot `.` ). By default, hidden files and directories are skipped.
+*   `-help` or `-h`: Show the help information (this documentation).
 
-*   `--help`: Displays help information (this option was added for completeness).
+## Ignore Patterns
 
-**Key Points about `-ignore`:**
+Ignore patterns allow you to exclude specific files and directories from being dumped.  Here's how they work:
 
-*   **Comma Separation:** Patterns *must* be separated by commas (`,`).
-*   **Directory Trailing Slash:** Use a trailing slash (`/`) to ignore directories (e.g., `temp/`). This distinguishes it from a file named "temp".
-*   **Globbing:**  Glob patterns (`*`, `?`, `[]`) are supported in both file and directory ignore patterns.
-*   **Relative Path Matching:** Ignore patterns are matched against paths *relative to the directory you specify as an argument* to `dump`.  (e.g., `dump -ignore="temp/" src/` ignores `src/temp/`).
-*   **Current Directory**: The pattern `.` or `./` will ignore current directory
-
+*   **Wildcards:**
+    *   `*`: Matches any sequence of characters within a file or directory name.
+    *   `?`: Matches any single character within a file or directory name.
+    *   `[]`: Matches any character within the brackets.  For example, `[abc]` matches `a`, `b`, or `c`.  Ranges are also supported: `[a-z]` matches any lowercase letter.
+*   **Directory Matching:** To match a directory, end the pattern with a forward slash (`/`). For instance, `temp/` will ignore the entire `temp` directory and all its contents.
+*   **File Matching:** Patterns without a trailing slash will match files.  For example, `*.log` will ignore all files ending with `.log`.
+*   **Path Matching:** The patterns are matched against both the base name of the file/directory and the full path.
+*   **Precedence:** If multiple ignore patterns match a file or directory, the *first* matching pattern in the comma separated list takes precedence.
+*   **Special Cases:**
+    *  `.` or `./`: ignore the current directory itself.
 
 ## Examples
 
-```bash
-# Dump a single file:
-dump myfile.txt
+1.  **Dump a single file:**
 
-# Dump multiple files:
-dump file1.txt file2.go file3.html
+    ```bash
+    dump file.txt
+    ```
 
-# Dump a directory (recursively):
-dump my_project/
+2.  **Dump all files in a directory recursively:**
 
-# Dump all .go files in a directory using a glob pattern:
-dump src/*.go
+    ```bash
+    dump src/
+    ```
 
-# Dump all .js files recursively (requires shell support for ** globbing):
-dump "**/*.js"
+3.  **Dump all Go files in the current directory:**
 
-# Ignore .log files:
-dump -ignore="*.log" my_project/
+    ```bash
+    dump *.go
+    ```
 
-# Ignore a directory (temp/) and all .tmp files:
-dump -ignore="temp/,*.tmp" my_project/
+4.  **Ignore .log files and the temp directory:**
 
-# Ignore multiple directories and files:
-dump -ignore=".git/,logs/,*.bak,config.ini" my_project/
+    ```bash
+    dump -ignore="*.log,temp/" project/
+    ```
+    or equivalently:
+    ```bash
+    dump -i="*.log,temp/" project/
+    ```
 
-# Ignore a directory and its contents using a glob pattern:
-dump -ignore="test_data/*" .
+5.  **Include hidden files like .gitignore:**
 
-# Ignore a directory and a specific file, relatively:
-dump -ignore="src/temp/,src/main_test.go" src/
+    ```bash
+    dump -hidden project/
+    ```
 
-# Ignore the current working directory:
-dump -ignore="." my_project/
+6.  **Dump multiple files:**
 
-# Show the version:
-dump -version
+    ```bash
+    dump file1.txt file2.txt src/main.go
+    ```
 
-# Ignore files in sub-sub directories:
-dump -ignore="logs/*/*.log" .  # Ignores logs/date1/x.log, logs/date2/y.log, etc.
+7.  **Dump all files in a directory, ignoring a specific subdirectory "vendor":**
 
-# show help
-dump --help
-```
+    ```bash
+    dump -ignore="vendor/" myproject/
+    ```
+
+8.  **Dump all .txt files, excluding those in a subdirectory named "drafts":**
+    ```bash
+    dump -i="drafts/" *.txt
+    ```
+
+9.  **Dump files but ignore the directory named data and all files ending in .bak**
+    ```bash
+    dump -i="data/,*.bak" /path/to/files
+    ```
+
+10. **Ignore files starting with 'tmp' (e.g., tmp1.txt, tmp_data.csv):**
+
+    ```bash
+    dump -i="tmp*" .
+    ```
+
+11. **Ignore any file or sub-directory inside a `build` directory, regardless of depth:**
+
+    ```
+    dump -i="build/*/" project
+    ```
+
+12. **Show the version:**
+
+    ```bash
+    dump -version
+    ```
+
+13. **Show Help:**
+
+    ```bash
+    dump -help
+    ```
 
 ## Output Format
 
-The output for each file is wrapped in `--- FILE-START ---` and `--- FILE-END ---` markers, followed by the file content:
+The output for each file is enclosed within `---FILE-START---` and `---FILE-END---` markers. The filename is displayed in a code block header.
 
-**Example Files:**
+## Error Handling
 
-`fileA.md`:
+*   If no file or directory paths are specified, an error message is displayed, and the help information is shown.
+*   If an invalid glob pattern is used, an error message is printed for that pattern.
+*   If a file or directory cannot be accessed (e.g., due to permissions), an error message is printed.
+*   If you use both `-ignore` and `-i`, the program will report an error and display usage.
+*   If a glob pattern doesn't match any files, a warning is displayed.
 
-```
-fileA-Content
-```
-
-`fileB.md`:
-
-```
-fileB-Content
-```
-
-**Command:**
-
-```bash
-dump ./fileA.md ./fileB.md
-```
-
-**Output:**
-
-````
----FILE-START---
-``` fileA.md
-fileA-Content
-```
----FILE-END---
-
---- FILE-START ---
-``` fileB.md
-fileB-Content
-```
----FILE-END---
-````
-
+## Exit Codes
+* 0: Successful execution
+* 1: Error (no path given, conflicting flags).
