@@ -8,6 +8,8 @@ TARGETS=(
 
 mkdir -p "${OUTPUT_DIR}"
 
+app_name = "dump"
+
 # Function to build the Go binary
 build_binary() {
   local GOOS="${1}"
@@ -30,7 +32,7 @@ build_binary() {
 for target in "${TARGETS[@]}"; do
   os=$(echo "$target" | cut -d'/' -f1)
   arch=$(echo "$target" | cut -d'/' -f2)
-  output_name="cmtbot-${os}-${arch}"
+  output_name="${app_name}-${os}-${arch}"
   
   if [ "$os" == "windows" ]; then
     output_name="${output_name}.exe"
