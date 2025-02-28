@@ -36,8 +36,8 @@ jobs:
         VERSION: ${{ github.event.inputs.version }}
       run: |
         mkdir -p dist
-        chmod +x ./.github/workflows/buildCrossPlatform.sh
-        ./.github/workflows/buildCrossPlatform.sh
+        chmod +x ./.github/workflows/scripts/buildCrossPlatform.sh
+        ./.github/workflows/scripts/buildCrossPlatform.sh
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
