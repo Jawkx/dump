@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release Version'
+        required: true
+        type: string
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version-file: 'go.mod'
+
+    - name: Configure Git committer
+      run: |
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Actions"
+
+    - name: Create Git tag
+      run: |
+        git tag -a v${{ github.event.inputs.version }} -m "Release v${{ github.event.inputs.version }}"
+        git push origin v${{ github.event.inputs.version }} --push-option=authToken=${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build binaries
+      env:
+        OUTPUT_DIR: dist
+        VERSION: ${{ github.event.inputs.version }}
+      run: |
+        mkdir -p dist
+        chmod +x ./.github/workflows/buildCrossPlatform.sh
+        ./.github/workflows/buildCrossPlatform.sh
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ github.event.inputs.version }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        files: |
+          ./dist/cmtbot-linux-amd64
+          ./dist/cmtbot-darwin-amd64
+          ./dist/cmtbot-windows-amd64.exe
