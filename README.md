@@ -9,14 +9,16 @@
 
 ### _For the lazy ones_
 
+#### Mac
 ``` bash
-# Macos
-curl -L "https://github.com/Jawkx/cmtbot/releases/download/<VERSION>/dump-darwin-amd64" -o dump && chmod +x dump && sudo mkdir -p /usr/local/bin 2>/dev/null && sudo mv dump /usr/local/bin/dump
-
-# Linux
-curl -L "https://github.com/Jawkx/cmtbot/releases/download/<VERSION>/dump-linux-amd64" -o dump && chmod +x dump && sudo mkdir -p /usr/local/bin 2>/dev/null && sudo mv dump /usr/local/bin/dump
+curl -L "https://github.com/Jawkx/cmtbot/releases/download/<VERSION>/dump-darwin-amd64" -o dump && chmod +x dump && mkdir -p "$HOME/.local/bin" 2>/dev/null && mv dump "$HOME/.local/bin/dump" && if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then echo "Please add $HOME/.local/bin to your PATH."; fi
 ```
-_make sure `usr/local/bin/` is in path_
+
+#### Linux
+``` bash
+curl -L "https://github.com/Jawkx/cmtbot/releases/download/<VERSION>/dump-linux-amd64" -o dump && chmod +x dump && mkdir -p "$HOME/.local/bin" 2>/dev/null && mv dump "$HOME/.local/bin/dump" && if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then echo "Please add $HOME/.local/bin to your PATH."; fi
+```
+_Not tested on anything other than Mac_
 
 ## Usage
 
