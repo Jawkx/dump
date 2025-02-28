@@ -1,6 +1,6 @@
 # dump - A Simple File and Directory Content Dumper
 
-`dump` is a command-line utility that displays the content of files and directories to standard output. It supports recursive directory traversal, glob patterns for file selection, and ignore patterns to exclude specific files and directories.
+`dump` is a command-line utility that displays the content of files and directories to standard output. perfect for quickly copy paste context into llm 
 
 ## Usage
 
