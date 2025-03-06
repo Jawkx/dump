@@ -68,7 +68,7 @@ func dumpFile(filePath string) {
 	}
 
 	fmt.Println("---FILE-START---")
-	fmt.Printf("``` %s\n", filepath.Base(filePath))
+	fmt.Printf("``` %s\n", filePath)
 	fmt.Print(string(content))
 	if !strings.HasSuffix(string(content), "\n") {
 		fmt.Println()
