@@ -7,9 +7,14 @@ import (
 	"path/filepath"
 )
 
-const version = "1.0.0"
+var version string
 
 func main() {
+
+	if version == "" {
+		version = "development"
+	}
+
 	versionFlag := flag.Bool("version", false, "Display the version of the dump utility")
 	versionShortFlag := flag.Bool("v", false, "Display the version of the dump utility")
 
