@@ -45,6 +45,6 @@ jobs:
         tag_name: v${{ github.event.inputs.version }}
         token: ${{ secrets.GITHUB_TOKEN }}
         files: |
-          ./dist/cmtbot-linux-amd64
-          ./dist/cmtbot-darwin-amd64
-          ./dist/cmtbot-windows-amd64.exe
+          ./dist/dump-linux-amd64
+          ./dist/dump-darwin-amd64
+          ./dist/dump-windows-amd64.exe
