@@ -6,9 +6,7 @@ TARGETS=(
   "windows/amd64"
 )
 
-mkdir -p "${OUTPUT_DIR}"
-
-app_name = "dump"
+app_name="dump"
 
 # Function to build the Go binary
 build_binary() {
