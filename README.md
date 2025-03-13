@@ -78,24 +78,20 @@ If a configuration file is found, `dump` will load the settings from it. If no c
 
 The following options can be configured in the TOML file:
 
-*   `file_start`:  A string that is printed before the content of each file.  It supports Go templates with the following data:
-    *   `.FilePath`: The path to the file.
-    *   `.FileExt`:  The file extension.
-    *   `.Content`: The content of the file.
-*   `file_end`: A string that is printed after the content of each file. It supports Go templates  with the following data:
-    *   `.FilePath`: The path to the file.
-    *   `.FileExt`:  The file extension.
-    *   `.Content`: The content of the file.
-*   `code_start`: A string that is printed before the code content of each file. Useful for specifying things like the language for syntax highlighting in markdown. It supports Go templates with the following data:
-    *   `.FilePath`: The path to the file.
-    *   `.FileExt`:  The file extension.
-    *   `.Content`: The content of the file.
-*   `code_end`:   A string that is printed after the code content of each file.  It supports Go templates with the following data:
-    *   `.FilePath`: The path to the file.
-    *   `.FileExt`:  The file extension.
-    *   `.Content`: The content of the file.
+*   `file_start`:  A string that is printed before the content of each file.
+*   `file_end`: A string that is printed after the content of each file.
+*   `code_start`: A string that is printed before the code content of each file. Useful for specifying things like the language for syntax highlighting in markdown.
+*   `code_end`:   A string that is printed after the code content of each file.
+
+All of the options support Go templates with the following data
+
+*   `.FilePath`: The path to the file.
+*   `.FileExt`:  The file extension.
+*   `.Content`: The content of the file.
 
 ### Default Configuration
+
+And best configuration honestly
 
 ```toml
 file_start = "--- FILE-START: {{.FilePath}} ---"
