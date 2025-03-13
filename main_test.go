@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -43,32 +44,38 @@ func TestParseIgnorePatterns(t *testing.T) {
 
 func TestShouldIgnore(t *testing.T) {
 	tests := []struct {
-		name      string
-		path      string
-		isDir     bool
-		patterns  []string
-		shouldIgn bool
+		name          string
+		path          string
+		isDir         bool
+		patterns      []string
+		includeHidden bool
+		shouldIgn     bool
 	}{
-		{"No patterns", "file.txt", false, nil, false},
-		{"Simple file match", "file.log", false, []string{"*.log"}, true},
-		{"File doesn't match", "file.txt", false, []string{"*.log"}, false},
-		{"Directory match", "temp", true, []string{"temp/"}, true},
-		{"Subdirectory match", "logs/temp/file.txt", true, []string{"logs/temp/"}, true},
-		{"Current directory", ".", true, []string{"."}, true},
-		{"Path with wildcard", "logs/2023/error.log", false, []string{"logs/*/*.log"}, true},
-		{"Exact file match", "config.ini", false, []string{"config.ini"}, true},
-		{"Complex pattern", "src/temp/cache.tmp", false, []string{"**/temp/**"}, true},
+		{"No patterns", "file.txt", false, nil, false, false},
+		{"Simple file match", "file.log", false, []string{"*.log"}, false, true},
+		{"File doesn't match", "file.txt", false, []string{"*.log"}, false, false},
+		{"Directory match", "temp", true, []string{"temp/"}, false, true},
+		{"Subdirectory match", "logs/temp/file.txt", true, []string{"logs/temp/"}, false, true},
+		{"Current directory", ".", true, []string{"."}, false, true},
+		{"Path with wildcard", "logs/2023/error.log", false, []string{"logs/*/*.log"}, false, true},
+		{"Exact file match", "config.ini", false, []string{"config.ini"}, false, true},
+		{"Complex pattern", "src/temp/cache.tmp", false, []string{"**/temp/**"}, false, true},
+		{"Hidden file ignored", ".gitignore", false, nil, false, true},
+		{"Hidden file included", ".gitignore", false, nil, true, false},
+		{"Hidden dir ignored", ".git", true, nil, false, true},
+		{"Hidden dir included", ".git", true, nil, true, false},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := shouldIgnore(tc.path, tc.isDir, tc.patterns)
+			result := shouldIgnore(tc.path, tc.isDir, tc.patterns, tc.includeHidden)
 			if result != tc.shouldIgn {
 				t.Errorf(
-					"Expected shouldIgnore to return %v for path '%s' with patterns %v, got %v",
+					"Expected shouldIgnore to return %v for path '%s' with patterns %v and includeHidden=%v, got %v",
 					tc.shouldIgn,
 					tc.path,
 					tc.patterns,
+					tc.includeHidden,
 					result,
 				)
 			}
@@ -100,7 +107,121 @@ func TestContainsGlobPattern(t *testing.T) {
 	}
 }
 
-// TestDumpFile creates a temporary file and tests if the content is correctly read
+func TestNewConfig(t *testing.T) {
+	config := NewConfig()
+
+	if config.FileStart != "--- FILE-START: {{.FilePath}} ---" {
+		t.Errorf("Expected default FileStart, got %s", config.FileStart)
+	}
+
+	if config.FileEnd != "--- FILE-END ---" {
+		t.Errorf("Expected default FileEnd, got %s", config.FileEnd)
+	}
+
+	if config.ContentStart != "``` {{.FileExt}}" {
+		t.Errorf("Expected default ContentStart, got %s", config.ContentStart)
+	}
+
+	if config.ContentEnd != "```" {
+		t.Errorf("Expected default ContentEnd, got %s", config.ContentEnd)
+	}
+}
+
+func TestConfigLoad(t *testing.T) {
+	// Create a temporary config file
+	tmpDir, err := os.MkdirTemp("", "config-test")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	configPath := filepath.Join(tmpDir, "config.toml")
+	configContent := `
+file_start = "== FILE: {{.FilePath}} =="
+file_end = "== END FILE =="
+code_start = "<< {{.FileExt}} >>"
+code_end = "<< END >>"
+`
+
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test config file: %v", err)
+	}
+
+	// Test loading config
+	config := NewConfig()
+	err = config.Load(configPath)
+
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	if config.FileStart != "== FILE: {{.FilePath}} ==" {
+		t.Errorf("Expected custom FileStart, got %s", config.FileStart)
+	}
+
+	if config.FileEnd != "== END FILE ==" {
+		t.Errorf("Expected custom FileEnd, got %s", config.FileEnd)
+	}
+
+	if config.ContentStart != "<< {{.FileExt}} >>" {
+		t.Errorf("Expected custom ContentStart, got %s", config.ContentStart)
+	}
+
+	if config.ContentEnd != "<< END >>" {
+		t.Errorf("Expected custom ContentEnd, got %s", config.ContentEnd)
+	}
+
+	// Test loading non-existent config file
+	config = NewConfig()
+	err = config.Load(filepath.Join(tmpDir, "nonexistent.toml"))
+
+	if err != nil {
+		t.Errorf("Loading non-existent file should return nil, got: %v", err)
+	}
+}
+
+func TestConfigLoadFromPaths(t *testing.T) {
+	// Create a temporary config file
+	tmpDir, err := os.MkdirTemp("", "config-test")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	configPath1 := filepath.Join(tmpDir, "config1.toml")
+	configPath2 := filepath.Join(tmpDir, "config2.toml")
+
+	configContent := `
+file_start = "== FILE: {{.FilePath}} =="
+file_end = "== END FILE =="
+code_start = "<< {{.FileExt}} >>"
+code_end = "<< END >>"
+`
+
+	err = os.WriteFile(configPath1, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test config file: %v", err)
+	}
+
+	err = os.WriteFile(configPath2, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test config file: %v", err)
+	}
+
+	// Test loading from multiple paths (first doesn't exist, second does)
+	config := NewConfig()
+	err = config.LoadFromPaths([]string{configPath1, configPath2})
+
+	if err != nil {
+		t.Fatalf("LoadFromPaths failed: %v", err)
+	}
+
+	if config.FileStart != "== FILE: {{.FilePath}} ==" {
+		t.Errorf("Expected custom FileStart from second path, got %s", config.FileStart)
+	}
+}
+
 func TestDumpFile(t *testing.T) {
 	// Create a temporary file
 	content := "test content"
@@ -117,13 +238,21 @@ func TestDumpFile(t *testing.T) {
 		t.Fatalf("Failed to close temp file: %v", err)
 	}
 
+	// Create a custom config
+	config := &Config{
+		FileStart:    "START: {{.FilePath}}",
+		FileEnd:      "END",
+		ContentStart: "```",
+		ContentEnd:   "```",
+	}
+
 	// Redirect stdout to capture output
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	// Call the function we're testing
-	dumpFile(tmpfile.Name())
+	dumpFile(tmpfile.Name(), config)
 
 	// Restore stdout
 	w.Close()
@@ -137,6 +266,15 @@ func TestDumpFile(t *testing.T) {
 	// Verify output contains our content
 	if output == "" {
 		t.Error("Expected output, got nothing")
+	}
+
+	if !strings.Contains(output, content) {
+		t.Errorf("Output doesn't contain file content: %s", output)
+	}
+
+	// Verify custom format is used
+	if !strings.Contains(output, "START: "+tmpfile.Name()) {
+		t.Errorf("Output doesn't use custom format: %s", output)
 	}
 }
 
@@ -155,13 +293,15 @@ func TestProcessPath(t *testing.T) {
 		t.Fatalf("Failed to write test file: %v", err)
 	}
 
+	config := NewConfig()
+
 	// Test processing a file
 	// Redirect stdout to capture output
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-	processPath(testFilePath, nil)
+	processPath(testFilePath, nil, false, config)
 
 	// Restore stdout
 	w.Close()
@@ -181,7 +321,7 @@ func TestProcessPath(t *testing.T) {
 	r, w, _ = os.Pipe()
 	os.Stdout = w
 
-	processPath(tempDir, nil)
+	processPath(tempDir, nil, false, config)
 
 	w.Close()
 	os.Stdout = oldStdout
