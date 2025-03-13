@@ -8,14 +8,19 @@ import (
 )
 
 type Config struct {
-	FileStart string `toml:"file_start"`
-	FileEnd   string `toml:"file_end"`
-	CodeStart string `toml:"code_start"`
-	CodeEnd   string `toml:"code_end"`
+	FileStart    string `toml:"file_start"`
+	FileEnd      string `toml:"file_end"`
+	ContentStart string `toml:"code_start"`
+	ContentEnd   string `toml:"code_end"`
 }
 
 func NewConfig() *Config {
-	return &Config{}
+	return &Config{
+		FileStart:    "--- FILE-START: {{.FilePath}} ---",
+		FileEnd:      "--- FILE-END ---",
+		ContentStart: "``` {{.FileExt}}",
+		ContentEnd:   "```",
+	}
 }
 
 type ErrConfigFileNotFound struct {
@@ -29,7 +34,7 @@ func (e ErrConfigFileNotFound) Error() string {
 func (c *Config) Load(path string) error {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
-		return ErrConfigFileNotFound{Path: path}
+		return nil
 	}
 
 	_, err = toml.DecodeFile(path, c)
@@ -38,4 +43,18 @@ func (c *Config) Load(path string) error {
 		return err
 	}
 	return nil
+}
+
+func (c *Config) LoadFromPaths(paths []string) error {
+	for _, path := range paths {
+		err := c.Load(path)
+		if err == nil {
+			return nil
+		}
+		if !os.IsNotExist(err) {
+			return err
+		}
+		fmt.Printf("Config file not found at %s, trying next path...\n", path)
+	}
+	return fmt.Errorf("no config file found in provided paths")
 }

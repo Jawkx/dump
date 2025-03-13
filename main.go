@@ -15,6 +15,18 @@ func main() {
 		version = "development"
 	}
 
+	config := NewConfig()
+
+	configPaths := []string{
+		filepath.Join(userHomeDir(), ".config/dump.toml"),
+		filepath.Join(userHomeDir(), ".config/dump/config.toml"),
+	}
+
+	err := config.LoadFromPaths(configPaths)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+	}
+
 	versionFlag := flag.Bool("version", false, "Display the version of the dump utility")
 	versionShortFlag := flag.Bool("v", false, "Display the version of the dump utility")
 
@@ -84,10 +96,10 @@ func main() {
 			}
 
 			for _, match := range matches {
-				processPath(match, ignorePatterns, *includeHiddenFlag)
+				processPath(match, ignorePatterns, *includeHiddenFlag, config)
 			}
 		} else {
-			processPath(path, ignorePatterns, *includeHiddenFlag)
+			processPath(path, ignorePatterns, *includeHiddenFlag, config)
 		}
 	}
 }
@@ -116,4 +128,13 @@ func printHelp() {
 	fmt.Println("  dump *.go                            # Dump all Go files in current directory")
 	fmt.Println("  dump -ignore=\"*.log,temp/\" project/   # Ignore .log files and temp directory")
 	fmt.Println("  dump -hidden project/                # Include hidden files like .gitignore")
+}
+
+func userHomeDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Unable to determine user home directory: %v\n", err)
+		return ""
+	}
+	return home
 }

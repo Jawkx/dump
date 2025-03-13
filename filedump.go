@@ -1,14 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 )
 
-func processPath(path string, ignorePatterns []string, includeHidden bool) {
+func processPath(path string, ignorePatterns []string, includeHidden bool, config *Config) {
 	info, err := os.Stat(path)
 	if err != nil {
 		fmt.Printf("Error accessing '%s': %v\n", path, err)
@@ -20,13 +22,13 @@ func processPath(path string, ignorePatterns []string, includeHidden bool) {
 	}
 
 	if info.IsDir() {
-		processDirectory(path, ignorePatterns, includeHidden)
+		processDirectory(path, ignorePatterns, includeHidden, config)
 	} else {
-		dumpFile(path)
+		dumpFile(path, config)
 	}
 }
 
-func processDirectory(dirPath string, ignorePatterns []string, includeHidden bool) {
+func processDirectory(dirPath string, ignorePatterns []string, includeHidden bool, config *Config) {
 	err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			fmt.Printf("Error accessing '%s': %v\n", path, err)
@@ -35,7 +37,6 @@ func processDirectory(dirPath string, ignorePatterns []string, includeHidden boo
 
 		isDir := d.IsDir()
 
-		// Check if the item should be ignored
 		if shouldIgnore(path, isDir, ignorePatterns, includeHidden) {
 			if isDir {
 				return filepath.SkipDir
@@ -44,7 +45,7 @@ func processDirectory(dirPath string, ignorePatterns []string, includeHidden boo
 		}
 
 		if !isDir {
-			dumpFile(path)
+			dumpFile(path, config)
 		}
 
 		return nil
@@ -55,7 +56,13 @@ func processDirectory(dirPath string, ignorePatterns []string, includeHidden boo
 	}
 }
 
-func dumpFile(filePath string) {
+type FileData struct {
+	FilePath string
+	Content  string
+	FileExt  string
+}
+
+func dumpFile(filePath string, config *Config) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		fmt.Printf("Error reading '%s': %v\n", filePath, err)
@@ -64,16 +71,61 @@ func dumpFile(filePath string) {
 
 	ext := filepath.Ext(filePath)
 	if ext != "" {
+		// Remove the leading dot
 		ext = ext[1:]
 	}
 
-	fmt.Println("---FILE-START---")
-	fmt.Printf("``` %s\n", filePath)
-	fmt.Print(string(content))
-	if !strings.HasSuffix(string(content), "\n") {
-		fmt.Println()
+	data := FileData{
+		FilePath: filePath,
+		Content:  string(content),
+		FileExt:  ext,
 	}
-	fmt.Println("```")
-	fmt.Println("---FILE-END---")
-	fmt.Println()
+
+	fileStartString, err := parseTemplate(config.FileStart, data)
+	if err != nil {
+		fmt.Printf("Error parsing file start string")
+		return
+	}
+
+	contentStartString, err := parseTemplate(config.ContentStart, data)
+	if err != nil {
+		fmt.Printf("Error parsing file start string")
+		return
+	}
+
+	contentEndString, err := parseTemplate(config.ContentEnd, data)
+	if err != nil {
+		fmt.Printf("Error parsing file start string")
+		return
+	}
+
+	fileEndString, err := parseTemplate(config.FileEnd, data)
+	if err != nil {
+		fmt.Printf("Error parsing file start string")
+		return
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fileStartString + "\n")
+	sb.WriteString(contentStartString + "\n")
+	sb.WriteString(string(content) + "\n")
+	sb.WriteString(contentEndString + "\n")
+	sb.WriteString(fileEndString + "\n")
+
+	fmt.Println(sb.String())
+}
+
+func parseTemplate(input string, data FileData) (string, error) {
+	tmpl, err := template.New("").Parse(input)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
