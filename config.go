@@ -23,18 +23,10 @@ func NewConfig() *Config {
 	}
 }
 
-type ErrConfigFileNotFound struct {
-	Path string
-}
-
-func (e ErrConfigFileNotFound) Error() string {
-	return fmt.Sprintf("config file not found: %s", e.Path)
-}
-
 func (c *Config) Load(path string) error {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
-		return nil
+		return err
 	}
 
 	_, err = toml.DecodeFile(path, c)
@@ -54,7 +46,8 @@ func (c *Config) LoadFromPaths(paths []string) error {
 		if !os.IsNotExist(err) {
 			return err
 		}
-		fmt.Printf("Config file not found at %s, trying next path...\n", path)
+		// TODO: Implement better logging system
+		// fmt.Printf("Config file not found at %s, trying next path...\n", path)
 	}
 	return fmt.Errorf("no config file found in provided paths")
 }
