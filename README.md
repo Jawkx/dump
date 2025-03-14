@@ -26,6 +26,23 @@ curl -L "https://github.com/Jawkx/dump/releases/download/<VERSION>/dump-linux-am
 ```bash
 dump [options] <file_path1> <file_path2> ...
 ```
+Since the output is std out, you can pipe it into other program to customize what you want to do with it 
+
+Using with [mods](https://github.com/charmbracelet/mods)
+
+``` bash
+dump ./* | mods "what does this directory does"
+```
+
+Or just pipe it to your clipboard 
+
+``` bash
+# For linux
+dump ./* | xclip -selection clipboard 
+
+# For macos
+dump ./* | pbcopy
+```
 
 ## Arguments
 
