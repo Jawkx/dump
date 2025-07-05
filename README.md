@@ -1,3 +1,5 @@
+> This tool will stop being maintained, a successor was created using the experience I gained from using this tool, head over to [ctxcat](https://github.com/Jawkx/ctxcat) to check that out
+
 # dump - File/Directory Content Dumper
 
 `dump` displays file and directory content to standard output, ideal for LLM input.
